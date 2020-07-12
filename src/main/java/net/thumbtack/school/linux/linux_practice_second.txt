@@ -1,0 +1,224 @@
+1.SSH
+Генерируем ключи: ssh-keygen,
+получаем:
+Приватный ключ по пути ~/.ssh/id_rsa
+Публичный ключ по пути ~/.ssh/id_rsa.pub
+Копируем публчный ключ на Server: ssh-copy-id dantes@127.0.0.1 -p 2222
+Отключаем вход по паролю: 
+переходим в файл sudo /etc/ssh/sshd_config, вводим пароль, меняем значение переменной PasswordAuthentication на no (также зарещаем
+root-пользователю вход по паролю, меняя значение переменной PermitRootLogin на no);
+Перезагружаем  службу: sudo service ssh restart.
+
+---------------------------------------------------------------------
+2.Установка сервиса на удаленной машине
+Устанавливаем java на сервере через apt install,
+Копируем на Server webHelloWorld.jar и запускаем:
+sudo scp -P 2222 WebHelloWorld.jar dantes@127.0.0.1:/home/dantes/HelloWorldServer.jar
+бросаем туннель между сервером и воркстешном: ssh -L 4567:127.0.0.1:4567 dantes@127.0.0.1 -p2222
+запускаем java -jar HelloWorldServer.jar
+в браузере заходим по адресу http://127.0.0.1:4567/hello
+получаем респонс: вывод текста "Hello World"
+Запуск с помощью screen:
+screen -S "myservice"
+java -jar HelloWorldServer.jar
+Запуск с помощью systemd:
+cd /etc/systemd/system/
+nano helloworld.service
+
+В файл записываем: 
+[Unit]            
+Description=Helloworld service            
+[Service]            
+Type=simple            
+User=dantes            
+ExecStart=/usr/bin/java -jar /home/dantes/HelloWorldServer.jar            
+ExecStop=/bin/kill -15 $MAINPID
+            
+[Install]            
+WantedBy=multi-user.target
+
+sudo systemctl daemon-reload - перезагрузка службы-демона
+sudo systemctl enable helloworld.service - подключаем нашу службу
+sudo systemctl start helloworld.service - запускаем ее
+sudo systemctl status helloworld.service - просмотр статуса службы
+sudo journalctl -u helloworld.service - просмотр логов
+
+Что вывелось в логи:
+
+фев 10 13:56:58 dantes systemd[1]: Started Helloworld service.
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.util.log - Logging initialized @275ms to org.eclipse.jetty.util.log.Slf4jLog
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO spark.embeddedserver.jetty.EmbeddedJettyServer - == Spark has ignited ...
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO spark.embeddedserver.jetty.EmbeddedJettyServer - >> Listening on 0.0.0.0:4567
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.Server - jetty-9.4.z-SNAPSHOT
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.session - DefaultSessionIdManager workerName=node0
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.session - No SessionScavenger set, using defaults
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.session - Scavenging every 600000ms
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@35aef6c3{HTTP/1.1,[http/1.1]}{0.0.0.0:4567}
+фев 10 13:56:58 dantes java[2628]: [Thread-0] INFO org.eclipse.jetty.server.Server - Started @474ms
+фев 10 13:59:09 dantes java[2628]: [qtp1608024434-10] INFO net.thumbtack.web.helloworld.HelloWorld - Request received from 127.0.0.1
+фев 10 13:59:09 dantes java[2628]: [qtp1608024434-12] INFO spark.http.matching.MatcherFilter - The requested route [/favicon.ico] has not been mapped in Spark for Accept: [image/webp,*/*]
+
+---------------------------------------------------------------------
+3.Сетевые утилиты
+sudo ngrep -d any -W byline port 4567 (или sudo tcpdump -i lo) - анализируем запросы и ответы порта 4567
+Что получили: 
+T 127.0.0.1:39440 -> 127.0.0.1:4567 [AP] #7
+GET /hello HTTP/1.1.
+Host: 127.0.0.1:4567.
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0.
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8.
+Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3.
+Accept-Encoding: gzip, deflate.
+Connection: keep-alive.
+Upgrade-Insecure-Requests: 1.
+Cache-Control: max-age=0.
+.
+
+####
+T 127.0.0.1:4567 -> 127.0.0.1:39440 [AP] #11
+HTTP/1.1 200 OK.
+Date: Tue, 11 Feb 2020 12:47:18 GMT.
+Content-Type: text/html;charset=utf-8.
+Transfer-Encoding: chunked.
+Server: Jetty(9.4.z-SNAPSHOT).
+.
+B.
+Hello World
+##
+T 127.0.0.1:4567 -> 127.0.0.1:39440 [AP] #13
+.
+0.
+.
+
+##
+T 127.0.0.1:39440 -> 127.0.0.1:4567 [AP] #15
+GET /favicon.ico HTTP/1.1.
+Host: 127.0.0.1:4567.
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0.
+Accept: image/webp,*/*.
+Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3.
+Accept-Encoding: gzip, deflate.
+Connection: keep-alive.
+Cache-Control: max-age=0.
+.
+
+##
+T 127.0.0.1:4567 -> 127.0.0.1:39440 [AP] #17
+HTTP/1.1 404 Not Found.
+Date: Tue, 11 Feb 2020 12:47:18 GMT.
+Content-Type: text/html;charset=utf-8.
+Transfer-Encoding: chunked.
+Server: Jetty(9.4.z-SNAPSHOT).
+.
+30.
+<html><body><h2>404 Not found</h2></body></html>
+##
+T 127.0.0.1:4567 -> 127.0.0.1:39440 [AP] #19
+.
+0.
+.
+
+Создадим лендинговый сайт и скопируем его на серевер командой:
+sudo scp -P 2222 -r site/ dantes@127.0.0.1:/var/www/site
+Изменим в файле конфигурации путь дефолтного сайта на наш:
+cd /etc/nginx/sites-available/
+sudo vi default 
+И перезапустим сервис:
+sudo service reload nginx
+Заходим на сайт по ссылке 127.0.0.1:80 (предварительно прокинув туннель на 80 порт)
+Нажимаем на формы get/post/upload/download и т.д. и проверяем командой
+sudo ngrep -d any -W byline port 80 (или sudo tcpdump -i lo)
+что вывелось в результате запросов на сервер.
+Получаем:
+
+T 127.0.0.1:42136 -> 127.0.0.1:80 [AP] #1
+POST / HTTP/1.1.
+Host: 127.0.0.1.
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0.
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8.
+Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3.
+Accept-Encoding: gzip, deflate.
+Content-Type: application/x-www-form-urlencoded.
+Content-Length: 0.
+Origin: http://127.0.0.1.
+Connection: keep-alive.
+Referer: http://127.0.0.1/.
+Upgrade-Insecure-Requests: 1.
+.
+
+#
+T 127.0.0.1:80 -> 127.0.0.1:42136 [AP] #2
+HTTP/1.1 405 Not Allowed.
+Server: nginx/1.14.0 (Ubuntu).
+Date: Sat, 15 Feb 2020 19:21:47 GMT.
+Content-Type: text/html.
+Content-Length: 182.
+Connection: keep-alive.
+.
+<html>.
+<head><title>405 Not Allowed</title></head>.
+<body bgcolor="white">.
+<center><h1>405 Not Allowed</h1></center>.
+<hr><center>nginx/1.14.0 (Ubuntu)</center>.
+</body>.
+</html>.
+
+##
+T 127.0.0.1:42136 -> 127.0.0.1:80 [AP] #4
+GET /favicon.ico HTTP/1.1.
+Host: 127.0.0.1.
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0.
+Accept: image/webp,*/*.
+Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3.
+Accept-Encoding: gzip, deflate.
+Connection: keep-alive.
+.
+
+#
+T 127.0.0.1:80 -> 127.0.0.1:42136 [AP] #5
+HTTP/1.1 404 Not Found.
+Server: nginx/1.14.0 (Ubuntu).
+Date: Sat, 15 Feb 2020 19:21:47 GMT.
+Content-Type: text/html.
+Transfer-Encoding: chunked.
+Connection: keep-alive.
+Content-Encoding: gzip.
+.
+8d.
+............(.......HML..).,.I.310Q../Qp./.K..........&..T*$.'.....*.gd..*..HN.+I-...0D7.(b......T....g.U.......(h.&....j".....2]..R...Vp.....
+0.
+.
+
+---------------------------------------------------------------------
+4.Графические клиенты, Iptables, ssh туннель
+На сервере установим mysql:
+sudo apt update
+sudo apt install mysql-server
+sudo mysql_secure_installation.
+Создадим нового нерутованого пользователя и выдадим ему права доступа:
+CREATE USER 'danTesServer'@'localhost' IDENTIFIED BY 'dantes';
+GRANT ALL PRIVILEGES ON * . * TO 'danTesServer'@'localhost';
+FLUSH PRIVILEGES;
+На рабочей машине установим workbench:
+sudo apt-get install mysql-workbench
+через терминал и рут пользователя создадим нового нерутованого пользователя так же, как делали это на сервере.
+Пробросим порт 3306 на виртуалке.
+В workbench создаем новое соединение Standard TCP/Ip over SSH
+SSH hostname: 127.0.0.1:2222
+SSH username: dantes
+MySQL hostname: 127.0.0.1
+MySQL Server Port: 3306
+Username: dantesServer
+Проверим соединение - работает.
+Попробуем убрать проброс портов на виртуалке - ошибка:
+
+Your connection attempt failed for user 'dantesServer' from your host to server at 127.0.0.1:3306:
+  Can't connect to MySQL server on '127.0.0.1' (111).
+
+Вернем проброс.
+Закроем на сервере порт 3306 с помощью iptables:
+sudo iptables -A INPUT -p tcp --dport 3306 -j DROP
+проверим соединение - ошибка:
+Failed to Connect to MySQL at 127.0.0.1:3306 through SSH tunnel at dantes@127.0.0.1:2222 with user dantesServer
+Убрать правило порта можно командой sudo iptables -F.
+

@@ -1,0 +1,135 @@
+Командная строка
+
+1.В своём домашнем каталоге создать подкаталог linux_ex и зайти в него.
+	cd ~ : переходим в домашний каталог
+	mkdir linux_ex : создаем подкаталог с именем linux_ex
+2. Создать файл hello.txt  с текстом “Hello world”.
+	cd linux_ex : переходим в него
+	echo "Hello world" > hello.txt : создаем файл hello.txt с текстом "Hello world"
+   Добавить в этот файл (разделяя пустыми строками)
+свои имя и фамилию: echo "Даниил Мысник" >> hello.txt.
+текущую дату : date >> hello.txt.
+имя пользователя : echo $USER >> hello.txt.
+содержимое домашнего каталога (нерекурсивно, список имен файлов, включая скрытые) : echo | ls -a >> linux_ex/hello.txt.
+содержимое корневого каталога (нерекурсивно) : echo | ls -a >> hello.txt.
+содержимое каталога /etc : echo | ls /etc/ >> hello.txt.
+только файлы в каталоге /etc : echo find /etc/ -maxdepth 1 -type f >> hello.txt.
+только файлы в каталоге /etc : echo find /etc/ -maxdepth 1 -type d >> hello.txt.
+содержимое файла /etc/passwd : cat /etc/passwd >> hello.txt.
+первый столбец файла /etc/passwd (список юзеров) : cut -d: -f1 /etc/passwd >> hello.txt.
+содержимое файла /etc/group : cat /etc/group >> hello.txt.
+первый столбец файла /etc/group (список групп) : cut -d: -f1 /etc/group >> hello.txt.
+первую и последнюю строки файла /etc/group : head -1 /etc/group >> hello.txt | tail -1 /etc/group >> hello.txt.
+Вывести hello.txt с прокруткой : more hello.txt.
+Разбить hello.txt на файлы размером 1к, затем собрать обратно :
+разбиваем на файлы по 1к: split -b 1k hello.txt, получаем 7 файлов
+собираем обратно : cat xaa xab xac xad xae xaf xag > hello2.txt.
+Заменить в hello.txt ‘/’ на ‘\’ : sudo tr '/' '\' < hello.txt > Hello.txt.
+Скопировать /var/log в текущий каталог (кроме файлов без доступа) с сохранением времени модификации : cp -r /var/log . >> hello.txt.
+Для полученной копии
+    вывести объем занимаемого места : sudo du -hs ./log/ >> hello.txt.
+    вывести все файлы, начинающиеся на ‘a’ (не каталоги) : find ./log/ -name "a*" -type f >> hello.txt.
+    удалить все файлы, начинающиеся на ‘a’ (не каталоги) : rm -f ./log/a*.
+    вывести все файлы со временем последней модификации больше 5 дней : find . -type f -mtime +5.
+    вывести все файлы со временем последней модификации меньше 5 дней : find . -type f -mtime -5.
+    создать каталог archive и переместить туда файлы (не каталоги) со временем     модификации больше 5 дней : mkdir archive | find . -type f -mtime +5 -exec mv -t ./archive/ {} +.
+Найти все файлы (рекурсивно) с расширением jar в каталогах /opt и /usr : find /opt /usr -name "*.jar".
+Найти все каталоги, содержащие файлы с расширением jar в каталогах /opt и /usr, вывести по одному разу : find /opt /usr -iname '*.jar' | xargs -d'\n' dirname | uniq
+Найти все файлы с расширением java, созданные месяц назад плюс-минус одна неделя : sudo find -iname '*.jar' -mtime +37 -mtime -23 | xargs -d'\n'.
+Создать с помощью touch несколько файлов 1.MP3, 2.MP3… Написать команду для группового переименования расширений в нижний регистр : touch 1.MP3 2.MP3 3.MP3 | rename 's/\.MP3$/\.mp3/' *.MP3.
+Установить вручную (без apt-get) java 8 и maven последней версии . Добавить путь запуска в переменную PATH, создать переменную M2_HOME. Выполнить сборку java проекта: 
+1. sudo mkdir -p /usr/lib/jvm Создаем новую директорию
+2. sudo tar -xf jdk-8u241-linux-x64.tar.gz -C /usr/lib/jvm Распаковываем архив в созданную папку
+3. Добавляем пути: 
+sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk1.8.0/bin/java 1
+sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/jdk1.8.0/bin/javac 1
+sudo update-alternatives --install /usr/bin/javaws javaws /usr/lib/jvm/jdk1.8.0/bin/javaws 1
+4.sudo update-alternatives --set java /usr/lib/jvm/jdk1.8.0_241/bin/java
+5.sudo mkdir -p /opt/maven
+6.sudo tar -xf apache-maven-3.6.3-bin.tar.gz -C /opt/maven
+7.sudo update-alternatives --install/usr/bin/mvn maven /opt/maven/apache-maven-3.6.3/bin/mvn 1001
+8.cd /etc/profile.d/
+9.sudo gedit maven.sh
+10.# Переменные среды Apache Maven
+	# MAVEN_HOME для Maven 1 - M2_HOME для Maven 2
+	export JAVA_HOME=/usr/lib/jvm/jdk-1.8.0-241
+	export M2_HOME=/opt/maven/apache-maven-3.6.3
+	export MAVEN_HOME=/opt/maven/apache-maven-3.6.3
+	export PATH=${M2_HOME}/bin:${PATH}
+11.sudo chmod + x maven.sh.
+
+Юзеры, группы и права.
+ 
+Создать двух юзеров (напр., ivanov, petrov), создать каталог /shared и дать полный доступ этим двум юзерам:
+sudo adduser ivanov
+sudo adduser petrov
+sudo mkdir linux_ex/shared
+sudo addgroup forshared -добавляем гуппу forshared
+sudo gpasswd -a ivanov forshared
+sudo gpasswd -a petrov forshared Добавляем юзеров в группу forshared
+sudo chgrp forshared /shared Меняем группу папки shared
+Можно проверить пользователей папки командой members forshared
+sudo chmod g+rwx /shared корректируем права пользователей (Даем полный доступ).
+
+Pipes
+
+Установить MySQL и создать базу ttschool, заполнить данными. Выполнить дамп базы в файл посредством pipe, затем восстановить из файла.
+
+Устанока MySQL:
+sudo apt update
+sudo apt install mysql-server
+sudo mysql_secure_installation.
+Запускаем сервер MySql: sudo service mysql start
+Подключаемся к серверу: sudo mysql -u root -p
+Создаем базу: create database ttschool;
+Задействуем базу : use ttschool;
+
+Создание таблиц:
+CREATE TABLE school (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(50) NOT NULL,
+ year INT NOT NULL, UNIQUE(name, year), PRIMARY KEY (id)) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+CREATE TABLE groups (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(50) NOT NULL,
+ room VARCHAR(50) NOT NULL, id_trainee INT, id_subject INT, id_school INT,  PRIMARY KEY (id), UNIQUE(id),
+foreign key (id_school) references school (id) on delete cascade) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+CREATE TABLE subject (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(50) NOT NULL, id_group INT,
+PRIMARY KEY (id), foreign key (id_group) references groups (id)) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+CREATE TABLE trainee (id INT NOT NULL AUTO_INCREMENT, firstName VARCHAR(50) NOT NULL, lastName VARCHAR(50) NOT NULL,
+ rating INT NOT NULL, id_group INT, PRIMARY KEY (id),
+foreign key (id_group) references groups (id) on delete cascade) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+CREATE TABLE group_subject (id INT NOT NULL AUTO_INCREMENT, id_group INT NOT NULL, id_subject INT NOT NULL,
+PRIMARY KEY (id), foreign key (id_group) references groups (id) on delete cascade,
+foreign key (id_subject) references subject (id) on delete cascade) ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+Заполнение данными:
+INSERT INTO school VALUES (1, "ttschool", 2019);
+INSERT INTO school VALUES (2, "ttschool", 2020);
+INSERT INTO groups VALUES (1, "backend", 1, null, null, 1);
+INSERT INTO groups VALUES (2, "frontend", 2, null, null, 1);
+INSERT INTO groups VALUES (3, "backend", 1, null, null, 2);
+INSERT INTO groups VALUES (4, "frontend", 2, null, null, 2);
+INSERT INTO trainee VALUES (1, "Даниил", "Мысник", 5, 3);
+INSERT INTO trainee VALUES (2, "Иванов", "Иван", 5, 3);
+INSERT INTO trainee VALUES (3, "Петр", "Петров", 5, 1);
+INSERT INTO trainee VALUES (4, "Андрей", "Сидоров", 4, 1);
+INSERT INTO trainee VALUES (5, "Игорь", "Неважнов", 3, 2);
+INSERT INTO trainee VALUES (6, "Семен", "Линин", 5, 2);
+INSERT INTO trainee VALUES (7, "Александр", "Трунин", 4, 4);
+INSERT INTO trainee VALUES (8, "Егор", "Ленин", 5, 4);
+INSERT INTO subject VALUES (1, "Linux", null);
+INSERT INTO subject VALUES (2, "Mocks", null);
+INSERT INTO subject VALUES (3, "Java", null);
+INSERT INTO subject VALUES (4, "Scala", null);
+INSERT INTO subject VALUES (5, "SQL", null);
+INSERT INTO subject VALUES (6, "C++", null);
+
+Дамп в файл: sudo mysqldump --opt ttschool > ttschool.sql
+Восстановление из файла: sudo mysql ttschool < ttschool.sql.
+
+
+
+	
+	
+	

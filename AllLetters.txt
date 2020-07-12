@@ -1,0 +1,3 @@
+Message{email='Two.mail.ru', sender='From@Mail.ru', subject='Some subject', body='Some text'}
+Message{email='Three@mail.ru', sender='From@Mail.ru', subject='Some subject', body='Some text'}
+Message{email='One@mail.ru', sender='From@Mail.ru', subject='Some subject', body='Some text'}
